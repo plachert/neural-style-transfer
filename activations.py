@@ -121,7 +121,9 @@ class ModelWithActivations(nn.Module):
     def activations_values(self):
         """Return values of the filtered activations."""
         activations = self.activations
-        activations_values = [activation.value for activation in activations]
+        activations_values = {}
+        for name, activations in activations.items():
+            activations_values[name] = [activation.value for activation in activations]
         return activations_values
 
     def _register_activation_hook(self):
