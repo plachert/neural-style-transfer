@@ -48,6 +48,11 @@ def run_nst(
         regularization_coeff=regularization_coeff,
         lr=lr,
     )
+    images = [
+        img_proc.channel_last(img_proc.convert_to_255scale(deprocessor(image)))
+        for image in images
+    ]
+    return images
 
 
 def run():
