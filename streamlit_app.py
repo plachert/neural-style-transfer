@@ -39,7 +39,15 @@ def run_nst(
     _, h, w = content_image.shape
     style_image = img_proc.load_image_from(style_image_path)
     random_image = img_proc.create_random_image(h, w)
-    print(random_image.shape)
+    images = optimize_image(
+        content_image=content_image, 
+        style_image=style_image, 
+        input_image=random_image, 
+        model=model_with_activations,  
+        n_iterations=n_iterations, 
+        regularization_coeff=regularization_coeff,
+        lr=lr,
+    )
 
 
 def run():
@@ -48,7 +56,7 @@ def run():
             content_image_path=content_image_path,
             style_image_path=style_image_path,
             config_name=model_selection,
-            selected_content_layer=selected_content_layer,
+            selected_content_layer=[selected_content_layer],
             selected_style_layers=selected_style_layers,
             n_iterations=n_iterations,
             regularization_coeff=regularization_coeff,

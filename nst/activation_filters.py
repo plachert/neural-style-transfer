@@ -15,11 +15,10 @@ class VerboseActivationFilter(ActivationFilter):
         activations_result = []
         for idx, activation in enumerate(activations):
             layer_type = activation.layer_type
-            output_shape = activation.output_shape
-            if (idx, layer_type, output_shape) in self. layers:
+            if (idx, layer_type) in self. layers:
                 activations_result.append(activation)
         return activations_result
     
     @staticmethod
     def list_all_available_parameters(activations):
-        return [(idx, activation.layer_type, activation.output_shape) for idx, activation in enumerate(activations)]
+        return [(idx, activation.layer_type) for idx, activation in enumerate(activations)]

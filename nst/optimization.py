@@ -1,5 +1,8 @@
 import torch
-import tqdm
+from tqdm import tqdm
+import numpy as np
+from torchmetrics.functional import total_variation
+from activation_tracker.model import ModelWithActivations
 
 
 
@@ -21,10 +24,27 @@ def get_loss(ref_content, ref_style, image_content, image_style, content_weight=
     loss = content_weight * l_content + style_weight * l_style
     return loss
 
+def prepare_input_image(input_image: np.ndarray, requires_grad=False):
+    """Prepare the image to be used in optimization."""
+    input_image = input_image.astype(dtype=np.float32)
+    input_image = torch.from_numpy(input_image)
+    input_image = torch.unsqueeze(input_image, 0)  # minibatch
+    input_image.requires_grad = requires_grad
+    return input_image
 
-def optimize_image(content_image, style_image, input_image, model, lr=0.1, n_iter=600, tv_coeff=10):
-    image = np.copy(input_image.detach().numpy().squeeze())
-    input_image = image_utils.prepare_input_image(image, requires_grad=True)
+
+def optimize_image(
+    content_image: np.ndarray, 
+    style_image: np.ndarray, 
+    input_image: np.ndarray, 
+    model: ModelWithActivations, 
+    n_iterations: int = 60, 
+    regularization_coeff: float = 10.,
+    lr: float = 0.1, 
+    ):
+    content_image = prepare_input_image(content_image, requires_grad=False)
+    style_image = prepare_input_image(style_image, requires_grad=False)
+    input_image = prepare_input_image(input_image, requires_grad=True)
     model(content_image)
     ref_content = model.activations_values["content"][0]
     model(style_image)
@@ -33,12 +53,12 @@ def optimize_image(content_image, style_image, input_image, model, lr=0.1, n_ite
     processed_images = []
     size = input_image.shape[-2] * input_image.shape[-1]
     
-    for _ in tqdm(range(n_iter)):
+    for _ in tqdm(range(n_iterations)):
         optimizer.zero_grad()
         model(input_image)
         image_content = model.activations_values["content"][0]
         image_style = maps_to_gram(model.activations_values["style"])
-        tv = tv_coeff * total_variation(input_image) / size
+        tv = regularization_coeff * total_variation(input_image) / size
         loss = get_loss(ref_content, ref_style, image_content, image_style) + tv
         loss.backward()
         optimizer.step()
