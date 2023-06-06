@@ -9,6 +9,8 @@ from activation_tracker.model import ModelWithActivations
 from nst.configs import SUPPORTED_CONFIGS
 from nst.activation_filters import ConvLikeActivationFilter, VerboseActivationFilter
 import nst.image_processing as img_proc
+from nst.optimization import optimize_image
+
 
 UPLOADED_PATH = pathlib.Path('examples/uploaded')
 UPLOADED_PATH.mkdir(parents=True, exist_ok=True)
@@ -34,7 +36,10 @@ def run_nst(
         model=classifier, activation_filters=activation_filters,
     )
     content_image = img_proc.load_image_from(content_image_path)
+    _, h, w = content_image.shape
     style_image = img_proc.load_image_from(style_image_path)
+    random_image = img_proc.create_random_image(h, w)
+    print(random_image.shape)
 
 
 def run():
@@ -113,7 +118,6 @@ if __name__ == '__main__':
             not st.session_state.get('style_image'),
         ]
             )
-        is_disabled = False ### DEBUG
         st.button('Run NST', on_click=run, disabled=is_disabled)
         model_selection = st.selectbox('Select model', available_model_configs)
         content_table, style_table, optimization_table = st.sidebar.tabs(

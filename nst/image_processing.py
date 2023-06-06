@@ -8,8 +8,6 @@ import scipy.ndimage as nd
 from activation_tracker.model import ModelWithActivations
 from PIL import Image
 
-from deepdream.optimization import optimize_image
-
 
 def convert_to_255scale(image):
     """Convert an image to 255 scale."""
