@@ -4,6 +4,11 @@ import numpy as np
 from torchmetrics.functional import total_variation
 from activation_tracker.model import ModelWithActivations
 
+if torch.cuda.is_available():  
+  dev = "cuda:0" 
+else:  
+  dev = "cpu"  
+device = torch.device(dev)  
 
 
 def gram_matrix(feature_maps):
@@ -16,11 +21,11 @@ def maps_to_gram(list_of_feats):
     grams = [gram_matrix(feature_maps) for feature_maps in list_of_feats]
     return grams
 
-def get_loss(ref_content, ref_style, image_content, image_style, content_weight=1, style_weight=100000):
+def get_loss(ref_content, ref_style, image_content, image_style, content_weight=1, style_weight=1):
+    style_weight = style_weight * 1000000 
     l_content = torch.nn.functional.mse_loss(ref_content, image_content)
     l_style = [torch.nn.functional.mse_loss(ref_style[i], image_style[i]) for i in range(len(ref_style))]
     l_style = torch.mean(torch.stack(l_style))
-    print(l_content, l_style)
     loss = content_weight * l_content + style_weight * l_style
     return loss
 
@@ -28,6 +33,7 @@ def prepare_input_image(input_image: np.ndarray, requires_grad=False):
     """Prepare the image to be used in optimization."""
     input_image = input_image.astype(dtype=np.float32)
     input_image = torch.from_numpy(input_image)
+    input_image = input_image.to(device)
     input_image = torch.unsqueeze(input_image, 0)  # minibatch
     input_image.requires_grad = requires_grad
     return input_image
@@ -42,6 +48,7 @@ def optimize_image(
     regularization_coeff: float = 10.,
     lr: float = 0.1, 
     ):
+    model.to(device)
     content_image = prepare_input_image(content_image, requires_grad=False)
     style_image = prepare_input_image(style_image, requires_grad=False)
     input_image = prepare_input_image(input_image, requires_grad=True)
@@ -59,11 +66,11 @@ def optimize_image(
         image_content = model.activations_values["content"][0]
         image_style = maps_to_gram(model.activations_values["style"])
         tv = regularization_coeff * total_variation(input_image) / size
-        loss = get_loss(ref_content, ref_style, image_content, image_style) + tv
+        loss = get_loss(ref_content, ref_style, image_content, image_style) + 100*tv
         loss.backward()
         optimizer.step()
         with torch.no_grad():
             input_image.clamp_(0, 1)
-        processed_images.append(np.copy(input_image.detach().numpy().squeeze()))
+        processed_images.append(np.copy(input_image.cpu().detach().numpy().squeeze()))
     return processed_images
 

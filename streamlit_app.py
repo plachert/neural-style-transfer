@@ -35,9 +35,10 @@ def run_nst(
     model_with_activations = ModelWithActivations(
         model=classifier, activation_filters=activation_filters,
     )
-    content_image = img_proc.load_image_from(content_image_path)
+    content_image = processor(img_proc.load_image_from(content_image_path))
     _, h, w = content_image.shape
-    style_image = img_proc.load_image_from(style_image_path)
+    style_image = processor(img_proc.load_image_from(style_image_path))
+    style_image = img_proc.resize_to_image(content_image, style_image)
     random_image = img_proc.create_random_image(h, w)
     images = optimize_image(
         content_image=content_image, 
@@ -49,7 +50,7 @@ def run_nst(
         lr=lr,
     )
     images = [
-        img_proc.channel_last(img_proc.convert_to_255scale(deprocessor(image)))
+        img_proc.channel_last(img_proc.convert_to_255scale((image)))
         for image in images
     ]
     return images
@@ -165,9 +166,9 @@ if __name__ == '__main__':
         )
         
         with optimization_table:
-            n_iterations = st.number_input('Iterations per level', 1, 300, 20, 1)
+            n_iterations = st.number_input('Iterations per level', 1, 1000, 200, 1)
             regularization_coeff = st.number_input(
-                'Regularization coeff', 0., 1., 0.1, 0.05,
+                'Regularization coeff', 0., 10., 0.1, 0.05,
             )
             lr = st.number_input('Learning rate', 0.001, 1., 0.5, 0.01)
             
