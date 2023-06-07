@@ -10,7 +10,6 @@ else:
   dev = "cpu"  
 device = torch.device(dev)  
 
-
 def gram_matrix(feature_maps):
     a, b, c, d = feature_maps.size()  
     features = feature_maps.view(a * b, c * d) 
@@ -21,7 +20,14 @@ def maps_to_gram(list_of_feats):
     grams = [gram_matrix(feature_maps) for feature_maps in list_of_feats]
     return grams
 
-def get_loss(ref_content, ref_style, image_content, image_style, content_weight=1, style_weight=1):
+def get_nst_loss(
+    ref_content, 
+    ref_style, 
+    image_content, 
+    image_style, 
+    content_weight=1, 
+    style_weight=1,
+    ):
     style_weight = style_weight * 1000000 
     l_content = torch.nn.functional.mse_loss(ref_content, image_content)
     l_style = [torch.nn.functional.mse_loss(ref_style[i], image_style[i]) for i in range(len(ref_style))]
@@ -38,6 +44,34 @@ def prepare_input_image(input_image: np.ndarray, requires_grad=False):
     input_image.requires_grad = requires_grad
     return input_image
 
+def normalized_tv(image):
+    size = image.shape[-2] * image.shape[-1]
+    return total_variation(image) / size
+
+def prepare_for_optimization(
+    model,
+    content_image,
+    style_image,
+    input_image,
+):
+    model.to(device)
+    content_image = prepare_input_image(content_image, requires_grad=False)
+    style_image = prepare_input_image(style_image, requires_grad=False)
+    input_image = prepare_input_image(input_image, requires_grad=True)
+    return model, content_image, style_image, input_image
+
+
+def get_reference(
+    model,
+    content_image,
+    style_image,
+):
+    model(content_image)
+    ref_content = model.activations_values["content"][0]
+    model(style_image)
+    ref_style = maps_to_gram(model.activations_values["style"])
+    return ref_content, ref_style
+
 
 def optimize_image(
     content_image: np.ndarray, 
@@ -45,17 +79,16 @@ def optimize_image(
     input_image: np.ndarray, 
     model: ModelWithActivations, 
     n_iterations: int = 60, 
-    regularization_coeff: float = 10.,
-    lr: float = 0.1, 
+    regularization_coeff: float = 1.,
+    lr: float = 0.3, 
     ):
-    model.to(device)
-    content_image = prepare_input_image(content_image, requires_grad=False)
-    style_image = prepare_input_image(style_image, requires_grad=False)
-    input_image = prepare_input_image(input_image, requires_grad=True)
-    model(content_image)
-    ref_content = model.activations_values["content"][0]
-    model(style_image)
-    ref_style = maps_to_gram(model.activations_values["style"])
+    model, content_image, style_image, input_image = prepare_for_optimization(
+        model,
+        content_image,
+        style_image,
+        input_image,
+    )
+    ref_content, ref_style = get_reference(model, content_image, style_image)
     optimizer = torch.optim.Adam([input_image], lr=lr)
     processed_images = []
     size = input_image.shape[-2] * input_image.shape[-1]
@@ -65,8 +98,8 @@ def optimize_image(
         model(input_image)
         image_content = model.activations_values["content"][0]
         image_style = maps_to_gram(model.activations_values["style"])
-        tv = regularization_coeff * total_variation(input_image) / size
-        loss = get_loss(ref_content, ref_style, image_content, image_style) + 100*tv
+        tv = 500 * regularization_coeff * normalized_tv(input_image)
+        loss = get_nst_loss(ref_content, ref_style, image_content, image_style) + tv
         loss.backward()
         optimizer.step()
         with torch.no_grad():

@@ -16,6 +16,7 @@ UPLOADED_PATH = pathlib.Path('examples/uploaded')
 UPLOADED_PATH.mkdir(parents=True, exist_ok=True)
 
 def run_nst(
+    input_init: str,
     content_image_path: pathlib.Path,
     style_image_path: pathlib.Path,
     config_name: str,
@@ -39,18 +40,23 @@ def run_nst(
     _, h, w = content_image.shape
     style_image = processor(img_proc.load_image_from(style_image_path))
     style_image = img_proc.resize_to_image(content_image, style_image)
-    random_image = img_proc.create_random_image(h, w)
+    if input_init == "random image":
+        input_image = img_proc.create_random_image(h, w)
+    elif input_init == "content image":
+        input_image = content_image
+    else:
+        input_image = style_image
     images = optimize_image(
         content_image=content_image, 
         style_image=style_image, 
-        input_image=random_image, 
+        input_image=input_image, 
         model=model_with_activations,  
         n_iterations=n_iterations, 
         regularization_coeff=regularization_coeff,
         lr=lr,
     )
     images = [
-        img_proc.channel_last(img_proc.convert_to_255scale((image)))
+        img_proc.channel_last(img_proc.convert_to_255scale(deprocessor(image)))
         for image in images
     ]
     return images
@@ -59,6 +65,7 @@ def run_nst(
 def run():
     with st.spinner('Processing...'):
         images = run_nst(
+            input_init=input_init,
             content_image_path=content_image_path,
             style_image_path=style_image_path,
             config_name=model_selection,
@@ -166,6 +173,7 @@ if __name__ == '__main__':
         )
         
         with optimization_table:
+            input_init = st.selectbox('Initialize with', ["random image", "content image", "style image"])
             n_iterations = st.number_input('Iterations per level', 1, 1000, 200, 1)
             regularization_coeff = st.number_input(
                 'Regularization coeff', 0., 10., 0.1, 0.05,
