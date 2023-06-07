@@ -5,9 +5,6 @@ A streamlit application for experimenting with [Neural Style Transfer](https://e
 * [Description](#description)
 * [Getting Started](#getting-started)
 * [Registering new models](#registering-new-models)
-* [Demo](#demo)
-    * [Visualise learnt features](#visualise-learnt-features)
-    * [Amplify features in an input image](#amplify-features-in-an-input-image)
 
 ##  Description
 Neural style transfer is a cool fun project that doesn't require much resources. There are already many repositories and tutorials on NST. One of the greatest materials I found on NST is this great series by [Aleksa Gordić](https://www.youtube.com/watch?v=S78LQebx6jo&list=PLBoQnSflObcmbfshq9oNs41vODgXG-608).
@@ -36,6 +33,7 @@ The parameters are divided into three categories:
     * Learning rate - learning rate of Adam optimizer
 
 When you selected all the required parameters just hit `Run NST` and wait for the result.
+![](https://github.com/plachert/neural-style-transfer/blob/main/examples/show_nst.gif)
 
 ## Registering new models
 If you want to use some other model you should add it to the `nst/config.py` following the `Config` template.
