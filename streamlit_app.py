@@ -6,14 +6,17 @@ import pathlib
 import streamlit as st
 from activation_tracker.activation import SUPPORTED_FILTERS
 from activation_tracker.model import ModelWithActivations
-from nst.configs import SUPPORTED_CONFIGS
-from nst.activation_filters import ConvLikeActivationFilter, VerboseActivationFilter
+
 import nst.image_processing as img_proc
+from nst.activation_filters import ConvLikeActivationFilter
+from nst.activation_filters import VerboseActivationFilter
+from nst.configs import SUPPORTED_CONFIGS
 from nst.optimization import optimize_image
 
 
 UPLOADED_PATH = pathlib.Path('examples/uploaded')
 UPLOADED_PATH.mkdir(parents=True, exist_ok=True)
+
 
 def run_nst(
     input_init: str,
@@ -28,8 +31,18 @@ def run_nst(
     regularization_coeff: float,
     lr: float,
 ):
-    content_filter = {"content": [ConvLikeActivationFilter(), VerboseActivationFilter(selected_content_layer)]}
-    style_filter = {"style": [ConvLikeActivationFilter(), VerboseActivationFilter(selected_style_layers)]}
+    content_filter = {
+        'content': [
+            ConvLikeActivationFilter(
+            ), VerboseActivationFilter(selected_content_layer),
+        ],
+    }
+    style_filter = {
+        'style': [
+            ConvLikeActivationFilter(
+            ), VerboseActivationFilter(selected_style_layers),
+        ],
+    }
     activation_filters = content_filter | style_filter
     config = SUPPORTED_CONFIGS[config_name]
     classifier = config.classifier
@@ -42,20 +55,20 @@ def run_nst(
     _, h, w = content_image.shape
     style_image = processor(img_proc.load_image_from(style_image_path))
     style_image = img_proc.resize_to_image(content_image, style_image)
-    if input_init == "random image":
+    if input_init == 'random image':
         input_image = img_proc.create_random_image(h, w)
-    elif input_init == "content image":
+    elif input_init == 'content image':
         input_image = content_image
     else:
         input_image = style_image
     images = optimize_image(
-        content_image=content_image, 
+        content_image=content_image,
         content_weight=content_weight,
-        style_image=style_image, 
+        style_image=style_image,
         style_weight=style_weight,
-        input_image=input_image, 
-        model=model_with_activations,  
-        n_iterations=n_iterations, 
+        input_image=input_image,
+        model=model_with_activations,
+        n_iterations=n_iterations,
         regularization_coeff=regularization_coeff,
         lr=lr,
     )
@@ -94,16 +107,19 @@ def run():
             'Regularization coeff': regularization_coeff,
             'Learning rate': lr,
         }
-    
-    
+
+
 @st.cache_data
 def get_strategy_params(config_name):
     config = SUPPORTED_CONFIGS[config_name]
     model = config.classifier
     example_input = config.example_input
     activation_filter_class = VerboseActivationFilter
+    activation_filters = {'convlike': [ConvLikeActivationFilter()]}
     model_with_activations = ModelWithActivations(
-        model=model, activation_filters={"convlike": [ConvLikeActivationFilter()]}, example_input=example_input,
+        model=model,
+        activation_filters=activation_filters,
+        example_input=example_input,
     )
     activations = model_with_activations.activations['convlike']
     parameters = activation_filter_class.list_all_available_parameters(
@@ -132,56 +148,59 @@ if __name__ == '__main__':
         page_icon=None,
     )
 
-
     available_model_configs = list(SUPPORTED_CONFIGS.keys())
     available_strategies = list(SUPPORTED_FILTERS.keys())
 
-    
     with st.sidebar:
-        st.title("Configuration")
+        st.title('Configuration')
         is_disabled = any(
             [
-            not st.session_state.get('selected_content_layer', []), 
-            not st.session_state.get('selected_style_layers', []),
-            not st.session_state.get('content_image'),
-            not st.session_state.get('style_image'),
-        ]
-            )
+                not st.session_state.get('selected_content_layer', []),
+                not st.session_state.get('selected_style_layers', []),
+                not st.session_state.get('content_image'),
+                not st.session_state.get('style_image'),
+            ],
+        )
         st.button('Run NST', on_click=run, disabled=is_disabled)
         model_selection = st.selectbox('Select model', available_model_configs)
         content_table, style_table, optimization_table = st.sidebar.tabs(
-        ['Content params', 'Style params', 'Optimization params'],
-    )
-            
+            ['Content params', 'Style params', 'Optimization params'],
+        )
+
         with content_table:
             content_file = st.file_uploader(
                 'Upload content image', type=['jpg', 'png'],
-                key="content_image",
+                key='content_image',
             )
             content_image_path = get_path_from_uploaded(content_file)
-            
+
             selected_content_layer = st.selectbox(
-            'Select layer', get_strategy_params(
-                model_selection
-            ),
-            key='selected_content_layer',
-        )
-            
+                'Select layer', get_strategy_params(
+                    model_selection,
+                ),
+                key='selected_content_layer',
+            )
+
         with style_table:
             style_file = st.file_uploader(
                 'Upload style image', type=['jpg', 'png'],
-                key="style_image",
+                key='style_image',
             )
             style_image_path = get_path_from_uploaded(style_file)
             selected_style_layers = st.multiselect(
-            'Select layers', get_strategy_params(
-                model_selection
-            ),
-            key='selected_style_layers',
-        )
-        
+                'Select layers', get_strategy_params(
+                    model_selection,
+                ),
+                key='selected_style_layers',
+            )
+
         with optimization_table:
-            input_init = st.selectbox('Initialize with', ["random image", "content image", "style image"])
+            input_init = st.selectbox(
+                'Initialize with', [
+                    'random image',
+                    'content image', 'style image',
+                ],
+            )
             content_weight = st.number_input('Content weight', 0., 2., 1., 0.1)
             style_weight = st.number_input('Style weight', 0., 2., 1., 0.1)
             n_iterations = st.number_input('Iterations', 1, 1000, 200, 1)
@@ -189,8 +208,7 @@ if __name__ == '__main__':
                 'Regularization coeff', 0., 10., 0.1, 0.05,
             )
             lr = st.number_input('Learning rate', 0.001, 1., 0.3, 0.01)
-            
-            
+
     images = st.session_state.get('images')
     last_run_params = st.session_state.get('last_run_params')
 
@@ -213,4 +231,3 @@ if __name__ == '__main__':
                 for param, value in last_run_params.items()
             }
             st.table(params_str)
-   

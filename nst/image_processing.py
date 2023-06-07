@@ -5,7 +5,6 @@ import pathlib
 
 import numpy as np
 import scipy.ndimage as nd
-from activation_tracker.model import ModelWithActivations
 from PIL import Image
 
 
