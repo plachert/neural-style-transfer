@@ -18,7 +18,9 @@ UPLOADED_PATH.mkdir(parents=True, exist_ok=True)
 def run_nst(
     input_init: str,
     content_image_path: pathlib.Path,
+    content_weight: float,
     style_image_path: pathlib.Path,
+    style_weight: float,
     config_name: str,
     selected_content_layer: list,
     selected_style_layers: list,
@@ -48,7 +50,9 @@ def run_nst(
         input_image = style_image
     images = optimize_image(
         content_image=content_image, 
+        content_weight=content_weight,
         style_image=style_image, 
+        style_weight=style_weight,
         input_image=input_image, 
         model=model_with_activations,  
         n_iterations=n_iterations, 
@@ -67,7 +71,9 @@ def run():
         images = run_nst(
             input_init=input_init,
             content_image_path=content_image_path,
+            content_weight=content_weight,
             style_image_path=style_image_path,
+            style_weight=style_weight,
             config_name=model_selection,
             selected_content_layer=[selected_content_layer],
             selected_style_layers=selected_style_layers,
@@ -78,7 +84,9 @@ def run():
         st.session_state['images'] = images
         st.session_state['last_run_params'] = {
             'Content image path': content_image_path,
+            'Content weight': content_weight,
             'Style image path': style_image_path,
+            'Style weight': style_weight,
             'Model': model_selection,
             'Content layer': selected_content_layer,
             'Style layers': selected_style_layers,
@@ -174,11 +182,13 @@ if __name__ == '__main__':
         
         with optimization_table:
             input_init = st.selectbox('Initialize with', ["random image", "content image", "style image"])
-            n_iterations = st.number_input('Iterations per level', 1, 1000, 200, 1)
+            content_weight = st.number_input('Content weight', 0., 2., 1., 0.1)
+            style_weight = st.number_input('Style weight', 0., 2., 1., 0.1)
+            n_iterations = st.number_input('Iterations', 1, 1000, 200, 1)
             regularization_coeff = st.number_input(
                 'Regularization coeff', 0., 10., 0.1, 0.05,
             )
-            lr = st.number_input('Learning rate', 0.001, 1., 0.5, 0.01)
+            lr = st.number_input('Learning rate', 0.001, 1., 0.3, 0.01)
             
             
     images = st.session_state.get('images')
@@ -203,32 +213,4 @@ if __name__ == '__main__':
                 for param, value in last_run_params.items()
             }
             st.table(params_str)
-    #     if uploaded_file is not None:
-    #         with open(f'{uploaded_path}/{uploaded_file.name}', 'wb') as f:
-    #             f.write(uploaded_file.read())
-    #         image_path = f'{uploaded_path}/{uploaded_file.name}'
-    #     else:
-    #         image_path = None
-
-    # images = st.session_state.get('images')
-    # last_run_params = st.session_state.get('last_run_params')
-
-    # if images:
-    #     l_margin, image_col, r_margin = st.columns([1, 3, 1])
-    #     n_images = len(images)
-    #     with l_margin:
-    #         st.write('')
-    #     with image_col:
-    #         img_slider = st.slider('Image slider', 1, n_images, n_images)
-    #         st.image(
-    #             images[img_slider-1], 'Processed Image',
-    #             width=600, use_column_width=True,
-    #         )
-    #     with r_margin:
-    #         st.write('')
-    #     with st.expander('Parameters'):
-    #         params_str = {
-    #             param: str(value)
-    #             for param, value in last_run_params.items()
-    #         }
-    #         st.table(params_str)
+   
