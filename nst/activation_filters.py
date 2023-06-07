@@ -1,13 +1,17 @@
+"""This module provides activation filters for NST."""
+
 from activation_tracker.activation import ActivationFilter, Activation
 import torch
 
 
 class ConvLikeActivationFilter(ActivationFilter):
+    """Preserve activations with shapes (n, c, h, w)."""
     def filter_activations(self, activations: list[Activation]) -> list[Activation]:
         return [activation for activation in activations if len(activation.output_shape) == 4]
     
 
 class VerboseActivationFilter(ActivationFilter):
+    """This one is needed for streamlit app to filter activations by selection."""
     def __init__(self, layers: list[tuple([int, str, torch.Size])]):
         self.layers = layers
         
