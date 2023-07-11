@@ -1,6 +1,8 @@
 # Neural Style Transfer
 A streamlit application for experimenting with [Neural Style Transfer](https://en.wikipedia.org/wiki/Neural_style_transfer).
 
+![](https://github.com/plachert/neural-style-transfer/blob/main/examples/nst_shot_demo.gif)
+
 ## Table of Contents
 * [Description](#description)
 * [Getting Started](#getting-started)
